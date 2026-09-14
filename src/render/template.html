@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 对话审计报告</title>
+<style>
+/* ============================================================
+   IDE 风格双主题（默认浅色；深色为 Trae Work / VS Code 风）
+   主题切换：html[data-theme="dark"]；JS 记忆在 localStorage
+   ============================================================ */
+:root {
+  --bg: #ffffff;
+  --bg-panel: #f6f7f8;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f1f3;
+  --bg-subtle: #fafbfc;
+  --border: #e2e4e9;
+  --border-strong: #c9cdd4;
+  --text: #1f2328;
+  --text-dim: #6a737d;
+  --accent: #0a6cdb;
+  --accent-soft: rgba(10, 108, 219, 0.08);
+  --accent-border: rgba(10, 108, 219, 0.35);
+  --green: #1a7f37;
+  --green-soft: rgba(26, 127, 55, 0.08);
+  --red: #cf222e;
+  --red-soft: rgba(207, 34, 46, 0.07);
+  --yellow: #9a6700;
+  --purple: #8250df;
+  --purple-soft: rgba(130, 80, 223, 0.08);
+  --radius: 8px;
+  --shadow: 0 1px 2px rgba(31, 35, 40, 0.06);
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --bg-panel: #252526;
+  --bg-card: #2d2d30;
+  --bg-hover: #37373d;
+  --bg-subtle: #26262a;
+  --border: #3e3e42;
+  --border-strong: #55555a;
+  --text: #d4d4d4;
+  --text-dim: #9d9d9d;
+  --accent: #4d9fff;
+  --accent-soft: rgba(77, 159, 255, 0.12);
+  --accent-border: rgba(77, 159, 255, 0.4);
+  --green: #4ec9b0;
+  --green-soft: rgba(78, 201, 176, 0.1);
+  --red: #f14c4c;
+  --red-soft: rgba(241, 76, 76, 0.1);
+  --yellow: #d7ba7d;
+  --purple: #c586c0;
+  --purple-soft: rgba(197, 134, 192, 0.12);
+  --shadow: none;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+pre {
+  font-family: "SF Mono", Consolas, "Cascadia Mono", "Courier New", monospace;
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 18px 60px; }
+
+/* ---------- 顶部条 ---------- */
+.topbar {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 0 14px;
+}
+.topbar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.topbar h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: .3px;
+  color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar h1 svg { width: 22px; height: 22px; color: var(--accent); flex: none; }
+.theme-btn {
+  margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all .15s;
+}
+.theme-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.theme-btn svg { width: 16px; height: 16px; }
+.chip-meta {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--bg-card);
+}
+.chip-meta b { color: var(--text); font-weight: 600; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  background: var(--bg-card);
+  display: flex; align-items: baseline; gap: 10px;
+}
+.stat-name { color: var(--text); font-size: 12px; font-weight: 600; }
+.stat-num { font-size: 12px; color: var(--text-dim); }
+.stat-num:first-of-type { color: var(--green); }
+
+/* ---------- 工具栏 ---------- */
+.toolbar {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  position: sticky; top: 0; z-index: 10;
+}
+.toolbar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.kw {
+  flex: 1 1 220px;
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.kw::placeholder { color: var(--text-dim); }
+.kw:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s;
+}
+.chip:hover { border-color: var(--border-strong); color: var(--text); }
+.chip.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.dates { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.dates input[type="date"] {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.dates input:focus { border-color: var(--accent); }
+.dates button {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.dates button:hover { border-color: var(--red); color: var(--red); }
+
+/* ---------- 会话分组与卡片 ---------- */
+.group { margin-top: 26px; }
+.group-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid var(--purple);
+  color: var(--purple);
+  background: var(--purple-soft);
+}
+.sess {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.sess:hover { border-color: var(--border-strong); }
+.sess-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background .15s;
+  user-select: none;
+}
+.sess-head:hover { background: var(--bg-hover); }
+.sess-head.open { background: var(--bg-subtle); }
+.sess-titles { flex: 1 1 260px; min-width: 200px; }
+.sess-title { color: var(--text); font-weight: 600; }
+.sess-src { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.sess-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-dim); }
+.sess-meta span::before { content: "› "; color: var(--accent); }
+.caret { color: var(--text-dim); font-size: 13px; }
+.sess-body { border-top: 1px solid var(--border); padding: 14px 16px; background: var(--bg); }
+.sess-empty { color: var(--text-dim); font-size: 13px; padding: 6px 0; }
+.noresult {
+  margin-top: 40px;
+  text-align: center;
+  color: var(--text-dim);
+  padding: 30px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+/* ---------- 消息流 ---------- */
+.msg { margin-bottom: 14px; max-width: 92%; }
+.msg-user { margin-right: auto; }
+.msg-assistant { margin-left: auto; text-align: right; }
+.msg-other { margin-right: auto; }
+.bubble {
+  display: inline-block;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  max-width: 100%;
+  word-break: break-word;
+}
+.msg-user .bubble { background: var(--bg-card); box-shadow: var(--shadow); }
+.msg-assistant .bubble { background: var(--bg-panel); border-color: var(--border); }
+.msg-other .bubble { background: var(--bg-subtle); }
+.bubble pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.bubble pre.empty { color: var(--text-dim); font-style: italic; }
+.role-label {
+  font-size: 11px;
+  color: var(--yellow);
+  margin-bottom: 4px;
+  text-transform: lowercase;
+  text-align: left;
+}
+.mtime { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+/* tool 折叠卡 */
+.msg-tool { max-width: 100%; }
+.tool-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+.tool-card.err { border-color: var(--red); }
+.tool-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  background: var(--bg-subtle);
+}
+.tool-head:hover { background: var(--bg-hover); }
+.tool-name { color: var(--yellow); font-size: 12px; font-weight: 600; }
+.tool-toggle { margin-left: auto; font-size: 11px; color: var(--text-dim); }
+.t-err {
+  font-size: 11px;
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.tool-card.err .tool-name { color: var(--red); }
+.tool-body { padding: 0 14px 12px; border-top: 1px dashed var(--border); }
+.tool-sec { margin-top: 10px; }
+.tool-label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+.tool-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.tool-card.err .tool-body pre { color: var(--red); }
+
+/* ---------- 底部失败汇总 ---------- */
+.failedbox { margin-top: 40px; }
+.failed-title { font-size: 15px; color: var(--red); letter-spacing: 1px; }
+.failed-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.failed-list li {
+  border-left: 3px solid var(--red);
+  background: var(--red-soft);
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  word-break: break-all;
+}
+.failedbox.ok { color: var(--green); font-size: 13px; }
+
+/* ---------- 移动端 ---------- */
+@media (max-width: 720px) {
+  .topbar-in, .toolbar-in { flex-direction: column; align-items: stretch; }
+  .stats { margin-left: 0; }
+  .dates { margin-left: 0; flex-wrap: wrap; }
+  .kw { min-width: 0; }
+  .msg { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <h1>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      AI 对话审计报告
+    </h1>
+    <span class="chip-meta">机器：<b id="mach"></b></span>
+    <span class="chip-meta">生成时间：<span id="gen"></span></span>
+    <button id="themeBtn" class="theme-btn" type="button" title="切换主题" aria-label="切换主题"></button>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap toolbar-in">
+    <input id="kw" class="kw" type="search" placeholder="关键词搜索（内容 / 工具名 / 项目 / 文件名）…" autocomplete="off">
+    <div class="chips" id="toolchips"></div>
+    <div class="dates">
+      <input id="dfrom" type="date" title="开始日期">
+      <span>—</span>
+      <input id="dto" type="date" title="结束日期">
+      <button id="reset" type="button">重置</button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap" id="groups"></main>
+
+<footer class="wrap failedbox" id="failedbox"></footer>
+
+<script>
+window.__DATA__=__DATA__;
+</script>
+<script>
+/* 主题切换：默认浅色，可切深色（Trae Work / VS Code 风），记忆在 localStorage */
+(function () {
+  "use strict";
+  var SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  var MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+  var btn = document.getElementById("themeBtn");
+  function apply(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    if (btn) btn.innerHTML = (t === "dark") ? SUN : MOON;
+    try { localStorage.setItem("audit-theme", t); } catch (e) {}
+  }
+  var saved = null;
+  try { saved = localStorage.getItem("audit-theme"); } catch (e) {}
+  apply(saved === "dark" ? "dark" : "light"); // 默认浅色
+  if (btn) {
+    btn.addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+      apply(cur === "dark" ? "light" : "dark");
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+
+  var DATA = window.__DATA__ || { sessions: [], meta: {} };
+  var sessions = (DATA.sessions || []).slice();
+  var meta = DATA.meta || {};
+
+  var TOOL_ORDER = ["claude-code", "codex", "workbuddy", "doubao"];
+  var TOOL_NAMES = {
+    "claude-code": "Claude Code",
+    "codex": "Codex",
+    "workbuddy": "WorkBuddy",
+    "doubao": "豆包"
+  };
+
+  var state = {
+    keyword: "",
+    tools: { "claude-code": true, "codex": true, "workbuddy": true, "doubao": true },
+    dateFrom: "",
+    dateTo: "",
+    expanded: {}
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function fmtTime(ms) {
+    if (!ms) return "—";
+    return new Date(ms).toLocaleString();
+  }
+
+  function localDate(ms) {
+    var d = new Date(ms);
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+
+  function toolName(t) { return TOOL_NAMES[t] || t || "未知工具"; }
+
+  function toolRank(t) {
+    var i = TOOL_ORDER.indexOf(t);
+    return i === -1 ? 99 : i;
+  }
+
+  function toolCallCount(s) {
+    var n = 0;
+    (s.messages || []).forEach(function (m) { if (m.tc) n++; });
+    return n;
+  }
+
+  /* ---------- 顶部条统计 ---------- */
+  function renderTopbar() {
+    $("mach").textContent = meta.machine || "未知";
+    $("gen").textContent = meta.generated_at || "—";
+    var st = {};
+    sessions.forEach(function (s) {
+      var t = s.tool || "unknown";
+      st[t] = st[t] || { sess: 0, msg: 0 };
+      st[t].sess++;
+      st[t].msg += (s.messages || []).length;
+    });
+    var html = "";
+    TOOL_ORDER.forEach(function (t) {
+      var c = st[t] || { sess: 0, msg: 0 };
+      html += '<div class="stat">'
+        + '<span class="stat-name">' + toolName(t) + '</span>'
+        + '<span class="stat-num">' + c.sess + ' 会话</span>'
+        + '<span class="stat-num">' + c.msg + ' 消息</span>'
+        + '</div>';
+    });
+    $("stats").innerHTML = html;
+  }
+
+  /* ---------- 工具栏 chips ---------- */
+  function renderToolbar() {
+    var html = '<button type="button" class="chip" data-tool="__all__">全选</button>';
+    TOOL_ORDER.forEach(function (t) {
+      html += '<button type="button" class="chip' + (state.tools[t] ? " on" : "") + '" data-tool="' + t + '">' + toolName(t) + '</button>';
+    });
+    $("toolchips").innerHTML = html;
+  }
+
+  /* ---------- 过滤 ---------- */
+  function matches(s) {
+    if (!state.tools[s.tool]) return false;
+    var first = s.first || 0;
+    if (state.dateFrom && localDate(first) < state.dateFrom) return false;
+    if (state.dateTo && localDate(first) > state.dateTo) return false;
+    if (state.keyword) {
+      var k = state.keyword.toLowerCase();
+      var hay = (s.title + " " + (s.user || "") + " " + (s.source || "") + " " + (s.id || "") + " " + toolName(s.tool)).toLowerCase();
+      (s.messages || []).forEach(function (m) {
+        hay += " " + (m.c || "").toLowerCase();
+        if (m.tc) hay += " " + (m.tc.name || "") + " " + (m.tc.args || "") + " " + (m.tc.result || "");
+      });
+      if (hay.indexOf(k) === -1) return false;
+    }
+    return true;
+  }
+
+  /* ---------- 消息 HTML ---------- */
+  function msgHtml(m) {
+    var role = m.role || "";
+    var c = m.c == null ? "" : String(m.c);
+    var body = c !== "" ? "<pre>" + esc(c) + "</pre>" : '<pre class="empty">（无内容）</pre>';
+
+    if (role === "tool" || m.tc) {
+      var tc = m.tc || {};
+      var nm = esc(tc.name || "tool");
+      var args = tc.args == null ? "" : String(tc.args);
+      var res = tc.result == null ? "" : String(tc.result);
+      var err = !!tc.err;
+      var badge = err ? '<span class="t-err">错误</span>' : "";
+      var bodyHtml = "";
+      if (args !== "") bodyHtml += '<div class="tool-sec"><div class="tool-label">参数</div><pre>' + esc(args) + '</pre></div>';
+      if (res !== "") bodyHtml += '<div class="tool-sec"><div class="tool-label">结果</div><pre>' + esc(res) + '</pre></div>';
+      if (bodyHtml === "") bodyHtml = '<div class="tool-sec"><pre class="empty">（无内容）</pre></div>';
+      return '<div class="msg msg-tool">'
+        + '<div class="tool-card' + (err ? " err" : "") + '">'
+        + '<div class="tool-head"><span class="tool-name">' + nm + '</span>' + badge + '<span class="tool-toggle">展开 ▸</span></div>'
+        + '<div class="tool-body" hidden>' + bodyHtml + '</div>'
+        + '</div></div>';
+    }
+    if (role === "user") {
+      return '<div class="msg msg-user"><div class="bubble">' + body + '</div><div class="mtime">' + fmtTime(m.t) + '</div></div>';
+    }
+    if (role === "assistant") {
+      return '<div class="msg msg-assistant"><div class="bubble">' + body + '</div><div class="mtime">' + fmtTime(m.t) + '</div></div>';
+    }
+    return '<div class="msg msg-other"><div class="role-label">' + esc(role) + '</div>'
+      + '<div class="bubble">' + body + '</div><div class="mtime">' + fmtTime(m.t) + '</div></div>';
+  }
+
+  /* ---------- 会话卡片 ---------- */
+  function sessionHtml(s, idx) {
+    var msgs = s.messages || [];
+    var open = !!state.expanded[idx];
+    var tr;
+    if (s.first && s.last) tr = fmtTime(s.first) + " → " + fmtTime(s.last);
+    else if (s.first || s.last) tr = fmtTime(s.first || s.last);
+    else tr = "无时间";
+    var src = toolName(s.tool) + " · " + (s.user || "未知项目") + " · " + (s.source || "未知文件");
+    var body = msgs.length === 0
+      ? '<div class="sess-empty">无消息</div>'
+      : msgs.map(msgHtml).join("");
+    return '<section class="sess" data-idx="' + idx + '">'
+      + '<header class="sess-head' + (open ? " open" : "") + '">'
+      + '<span class="tag">' + toolName(s.tool) + '</span>'
+      + '<div class="sess-titles">'
+      + '<div class="sess-title">' + esc(s.title) + '</div>'
+      + '<div class="sess-src">' + esc(src) + '</div>'
+      + '</div>'
+      + '<div class="sess-meta">'
+      + '<span>' + esc(tr) + '</span>'
+      + '<span>' + msgs.length + ' 消息</span>'
+      + '<span>' + toolCallCount(s) + ' 工具调用</span>'
+      + '</div>'
+      + '<span class="caret">' + (open ? "▾" : "▸") + '</span>'
+      + '</header>'
+      + '<div class="sess-body"' + (open ? "" : " hidden") + '>' + body + '</div>'
+      + '</section>';
+  }
+
+  /* ---------- 分组渲染：按 (tool, first 倒序) 排序 ---------- */
+  function renderGroups() {
+    var pairs = [];
+    sessions.forEach(function (s, i) {
+      if (matches(s)) pairs.push({ s: s, i: i });
+    });
+    pairs.sort(function (a, b) {
+      var ra = toolRank(a.s.tool), rb = toolRank(b.s.tool);
+      if (ra !== rb) return ra - rb;
+      return (b.s.first || 0) - (a.s.first || 0);
+    });
+
+    var g = $("groups");
+    if (pairs.length === 0) {
+      g.innerHTML = '<div class="noresult">没有匹配的会话，请调整筛选条件</div>';
+      return;
+    }
+    var groups = [];
+    pairs.forEach(function (p) {
+      var t = p.s.tool;
+      if (groups.length === 0 || groups[groups.length - 1].tool !== t) {
+        groups.push({ tool: t, items: [] });
+      }
+      groups[groups.length - 1].items.push(p);
+    });
+    var html = groups.map(function (grp) {
+      var cards = grp.items.map(function (p) { return sessionHtml(p.s, p.i); }).join("");
+      return '<div class="group"><h2 class="group-title"><span class="tag">' + toolName(grp.tool) + '</span></h2>' + cards + '</div>';
+    }).join("");
+    g.innerHTML = html;
+  }
+
+  /* ---------- 底部解析失败汇总 ---------- */
+  function renderFailed() {
+    var failed = meta.failed || [];
+    var box = $("failedbox");
+    if (!failed.length) {
+      box.innerHTML = '<div class="failedbox ok">无解析失败</div>';
+      return;
+    }
+    var html = '<h2 class="failed-title">解析失败汇总</h2><ul class="failed-list">';
+    failed.forEach(function (f) {
+      var t = (typeof f === "string") ? f : JSON.stringify(f);
+      html += '<li>' + esc(t) + '</li>';
+    });
+    html += '</ul>';
+    box.innerHTML = html;
+  }
+
+  /* ---------- 事件（全部 addEventListener，无内联属性） ---------- */
+  $("kw").addEventListener("input", function () {
+    state.keyword = this.value.trim();
+    renderGroups();
+  });
+
+  $("dfrom").addEventListener("change", function () {
+    state.dateFrom = this.value;
+    renderGroups();
+  });
+
+  $("dto").addEventListener("change", function () {
+    state.dateTo = this.value;
+    renderGroups();
+  });
+
+  $("reset").addEventListener("click", function () {
+    state.keyword = "";
+    state.dateFrom = "";
+    state.dateTo = "";
+    state.tools = { "claude-code": true, "codex": true, "workbuddy": true, "doubao": true };
+    state.expanded = {};
+    $("kw").value = "";
+    $("dfrom").value = "";
+    $("dto").value = "";
+    renderToolbar();
+    renderGroups();
+  });
+
+  $("toolchips").addEventListener("click", function (e) {
+    var btn = e.target.closest(".chip");
+    if (!btn) return;
+    var t = btn.getAttribute("data-tool");
+    if (t === "__all__") {
+      state.tools = { "claude-code": true, "codex": true, "workbuddy": true, "doubao": true };
+    } else {
+      state.tools[t] = !state.tools[t];
+    }
+    renderToolbar();
+    renderGroups();
+  });
+
+  $("groups").addEventListener("click", function (e) {
+    var head = e.target.closest(".sess-head");
+    if (head) {
+      var sec = head.parentNode;
+      var idx = parseInt(sec.getAttribute("data-idx"), 10);
+      var body = sec.querySelector(".sess-body");
+      var caret = sec.querySelector(".caret");
+      var open = !body.hidden;
+      body.hidden = open;
+      caret.textContent = open ? "▸" : "▾";
+      head.classList.toggle("open", !open);
+      if (open) delete state.expanded[idx];
+      else state.expanded[idx] = true;
+      return;
+    }
+    var thead = e.target.closest(".tool-head");
+    if (thead) {
+      var tbody = thead.parentNode.querySelector(".tool-body");
+      if (tbody) {
+        tbody.hidden = !tbody.hidden;
+        thead.querySelector(".tool-toggle").textContent = tbody.hidden ? "展开 ▸" : "收起 ▾";
+      }
+    }
+  });
+
+  /* ---------- 初始化 ---------- */
+  renderTopbar();
+  renderToolbar();
+  renderGroups();
+  renderFailed();
+})();
+</script>
+</body>
+</html>

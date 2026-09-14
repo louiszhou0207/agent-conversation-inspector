@@ -1,0 +1,6 @@
+{"type": "ai-title", "aiTitle": "示例：翻译 README 文档", "sessionId": "3c2b1a09-8765-4321-8fed-cba987654321", "cwd": "C:\\Users\\user\\Projects\\demo", "timestamp": 1780000000000}
+{"type": "message", "role": "user", "content": [{"type": "input_text", "text": "帮我写一份季度总结的提纲。"}], "sessionId": "3c2b1a09-8765-4321-8fed-cba987654321", "cwd": "C:\\Users\\user\\Projects\\demo", "timestamp": 1780000001000}
+{"type": "reasoning", "rawContent": [{"type": "reasoning_text", "text": "总结提纲应包含成果、问题与计划三部分。"}], "sessionId": "3c2b1a09-8765-4321-8fed-cba987654321", "cwd": "C:\\Users\\user\\Projects\\demo", "timestamp": 1780000002000}
+{"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "好的，以下是提纲：一、本季度成果；二、遇到的问题；三、下季度计划。"}], "sessionId": "3c2b1a09-8765-4321-8fed-cba987654321", "cwd": "C:\\Users\\user\\Projects\\demo", "timestamp": 1780000003000}
+{"type": "function_call", "name": "Read", "arguments": {"file_path": "C:\\Users\\user\\Projects\\demo\\notes.md"}, "sessionId": "3c2b1a09-8765-4321-8fed-cba987654321", "cwd": "C:\\Users\\user\\Projects\\demo", "timestamp": 1780000004000}
+{"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "已参考你的笔记，提纲可以在此基础上补充数据支撑。"}], "sessionId": "3c2b1a09-8765-4321-8fed-cba987654321", "cwd": "C:\\Users\\user\\Projects\\demo", "timestamp": 1780000005000}

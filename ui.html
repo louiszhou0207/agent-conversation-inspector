@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 对话审计 · 工作台</title>
+<style>
+/* ============================================================
+   与报告（template.html）共用同一套 IDE 双主题
+   ============================================================ */
+:root {
+  --bg: #ffffff;
+  --bg-panel: #f6f7f8;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f1f3;
+  --bg-subtle: #fafbfc;
+  --border: #e2e4e9;
+  --border-strong: #c9cdd4;
+  --text: #1f2328;
+  --text-dim: #6a737d;
+  --accent: #0a6cdb;
+  --accent-soft: rgba(10, 108, 219, 0.08);
+  --accent-border: rgba(10, 108, 219, 0.35);
+  --green: #1a7f37;
+  --green-soft: rgba(26, 127, 55, 0.08);
+  --red: #cf222e;
+  --red-soft: rgba(207, 34, 46, 0.07);
+  --yellow: #9a6700;
+  --purple: #8250df;
+  --purple-soft: rgba(130, 80, 223, 0.08);
+  --radius: 8px;
+  --shadow: 0 1px 2px rgba(31, 35, 40, 0.06);
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --bg-panel: #252526;
+  --bg-card: #2d2d30;
+  --bg-hover: #37373d;
+  --bg-subtle: #26262a;
+  --border: #3e3e42;
+  --border-strong: #55555a;
+  --text: #d4d4d4;
+  --text-dim: #9d9d9d;
+  --accent: #4d9fff;
+  --accent-soft: rgba(77, 159, 255, 0.12);
+  --accent-border: rgba(77, 159, 255, 0.4);
+  --green: #4ec9b0;
+  --green-soft: rgba(78, 201, 176, 0.1);
+  --red: #f14c4c;
+  --red-soft: rgba(241, 76, 76, 0.1);
+  --yellow: #d7ba7d;
+  --purple: #c586c0;
+  --purple-soft: rgba(197, 134, 192, 0.12);
+  --shadow: none;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+pre { font-family: "SF Mono", Consolas, "Cascadia Mono", "Courier New", monospace; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 18px 60px; }
+
+/* ---------- 顶栏 ---------- */
+.topbar { background: var(--bg-panel); border-bottom: 1px solid var(--border); padding: 20px 0 14px; }
+.topbar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.topbar h1 {
+  margin: 0; font-size: 20px; font-weight: 600; letter-spacing: .3px; color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar h1 svg { width: 22px; height: 22px; color: var(--accent); flex: none; }
+.theme-btn {
+  margin-left: auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-card); color: var(--text-dim); cursor: pointer; transition: all .15s;
+}
+.theme-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.theme-btn svg { width: 16px; height: 16px; }
+.chip-meta {
+  display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 12px; font-size: 12px; color: var(--text-dim); background: var(--bg-card);
+}
+.chip-meta b { color: var(--text); font-weight: 600; }
+
+/* ---------- 目录选择 ---------- */
+.section { margin-top: 22px; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin: 0 0 10px; }
+.pathbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pathbar input {
+  flex: 1 1 320px; min-width: 200px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 9px 12px; font-family: inherit; font-size: 13px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.pathbar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.btn {
+  border: 1px solid var(--border); background: var(--bg-card); color: var(--text);
+  border-radius: 8px; padding: 9px 16px; font-size: 13px; font-family: inherit; cursor: pointer;
+  transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+.btn svg { width: 15px; height: 15px; }
+.btn.primary {
+  background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
+}
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.status { font-size: 12px; color: var(--text-dim); min-height: 18px; }
+.status.err { color: var(--red); }
+
+/* ---------- 统计 ---------- */
+.stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.stat { border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; background: var(--bg-card); display: flex; align-items: baseline; gap: 10px; }
+.stat-name { color: var(--text); font-size: 12px; font-weight: 600; }
+.stat-num { font-size: 12px; color: var(--text-dim); }
+.stat-num:first-of-type { color: var(--green); }
+
+/* ---------- 会话卡片（与报告一致） ---------- */
+.sess { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
+.sess-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; cursor: pointer; transition: background .15s; user-select: none; }
+.sess-head:hover { background: var(--bg-hover); }
+.sess-head.open { background: var(--bg-subtle); }
+.sess-titles { flex: 1 1 260px; min-width: 200px; }
+.sess-title { color: var(--text); font-weight: 600; }
+.sess-src { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.sess-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-dim); }
+.sess-meta span::before { content: "› "; color: var(--accent); }
+.caret { color: var(--text-dim); font-size: 13px; }
+.sess-body { border-top: 1px solid var(--border); padding: 14px 16px; background: var(--bg); }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; border: 1px solid var(--purple); color: var(--purple); background: var(--purple-soft); }
+.sess-empty { color: var(--text-dim); font-size: 13px; padding: 6px 0; }
+.msg { margin-bottom: 14px; max-width: 92%; }
+.msg-user { margin-right: auto; }
+.msg-assistant { margin-left: auto; text-align: right; }
+.msg-other { margin-right: auto; }
+.bubble { display: inline-block; text-align: left; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; max-width: 100%; word-break: break-word; }
+.msg-user .bubble { background: var(--bg-card); box-shadow: var(--shadow); }
+.msg-assistant .bubble { background: var(--bg-panel); }
+.msg-other .bubble { background: var(--bg-subtle); }
+.bubble pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.65; }
+.bubble pre.empty { color: var(--text-dim); font-style: italic; }
+.mtime { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.role-label { font-size: 11px; color: var(--yellow); margin-bottom: 4px; text-transform: lowercase; text-align: left; }
+.msg-tool { max-width: 100%; }
+.tool-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); overflow: hidden; }
+.tool-card.err { border-color: var(--red); }
+.tool-head { display: flex; align-items: center; gap: 10px; padding: 8px 14px; cursor: pointer; background: var(--bg-subtle); }
+.tool-head:hover { background: var(--bg-hover); }
+.tool-name { color: var(--yellow); font-size: 12px; font-weight: 600; }
+.tool-toggle { margin-left: auto; font-size: 11px; color: var(--text-dim); }
+.t-err { font-size: 11px; color: var(--red); border: 1px solid var(--red); border-radius: 4px; padding: 0 6px; }
+.tool-card.err .tool-name { color: var(--red); }
+.tool-body { padding: 0 14px 12px; border-top: 1px dashed var(--border); }
+.tool-sec { margin-top: 10px; }
+.tool-label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+.tool-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.6; color: var(--text); }
+.tool-card.err .tool-body pre { color: var(--red); }
+.noresult { margin-top: 20px; text-align: center; color: var(--text-dim); padding: 24px; border: 1px dashed var(--border-strong); border-radius: var(--radius); }
+.failedbox { margin-top: 20px; }
+.failed-title { font-size: 14px; color: var(--red); }
+.failed-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.failed-list li { border-left: 3px solid var(--red); background: var(--red-soft); padding: 8px 14px; margin-bottom: 6px; font-size: 12px; word-break: break-all; }
+.failedbox.ok { color: var(--green); font-size: 13px; }
+@media (max-width: 720px) {
+  .topbar-in { flex-direction: column; align-items: stretch; }
+  .msg { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <h1>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      AI 对话审计 · 工作台
+    </h1>
+    <span class="chip-meta">B 段解析与报告</span>
+    <button id="themeBtn" class="theme-btn" type="button" title="切换主题" aria-label="切换主题"></button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="section">
+    <h2 class="section-title">① 选择会话数据目录</h2>
+    <div class="pathbar">
+      <input id="path" type="text" placeholder="粘贴或点右侧按钮选择：拉回的会话数据文件夹，如 F:\audit_2026-09-13" autocomplete="off" spellcheck="false">
+      <button id="pickBtn" class="btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+        选择目录
+      </button>
+      <button id="scanBtn" class="btn primary" type="button">扫描会话</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">② 扫描结果</h2>
+    <div class="stats" id="stats"></div>
+    <div id="groups" style="margin-top:14px;"></div>
+    <div class="failedbox" id="failedbox"></div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  var MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function fmtTime(ms) { return ms ? new Date(ms).toLocaleString() : "—"; }
+  function toolName(t) {
+    return { "claude-code": "Claude Code", "codex": "Codex", "workbuddy": "WorkBuddy", "doubao": "豆包" }[t] || t || "未知";
+  }
+  var TOOL_ORDER = ["claude-code", "codex", "workbuddy", "doubao"];
+
+  function setStatus(msg, err) {
+    var el = $("status");
+    el.textContent = msg || "";
+    el.className = "status" + (err ? " err" : "");
+  }
+
+  /* ---------- 主题 ---------- */
+  var btn = $("themeBtn");
+  function applyTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    btn.innerHTML = (t === "dark") ? SUN : MOON;
+    try { localStorage.setItem("audit-theme", t); } catch (e) {}
+  }
+  var saved = null;
+  try { saved = localStorage.getItem("audit-theme"); } catch (e) {}
+  applyTheme(saved === "dark" ? "dark" : "light");
+  btn.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    applyTheme(cur === "dark" ? "light" : "dark");
+  });
+
+  /* ---------- API ---------- */
+  function post(url, payload) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {})
+    }).then(function (r) { return r.json(); });
+  }
+
+  /* ---------- 目录选择（系统原生对话框） ---------- */
+  $("pickBtn").addEventListener("click", function () {
+    setStatus("正在打开系统目录选择对话框…");
+    $("pickBtn").disabled = true;
+    post("/api/pickdir").then(function (r) {
+      $("pickBtn").disabled = false;
+      if (r.error) { setStatus(r.error, true); return; }
+      $("path").value = r.path;
+      setStatus("");
+    });
+  });
+
+  /* ---------- 扫描 ---------- */
+  function msgHtml(m) {
+    var role = m.role || "";
+    var c = m.c == null ? "" : String(m.c);
+    var body = c !== "" ? "<pre>" + esc(c) + "</pre>" : '<pre class="empty">（无内容）</pre>';
+    if (role === "tool" || m.tc) {
+      var tc = m.tc || {};
+      var nm = esc(tc.name || "tool");
+      var args = tc.args == null ? "" : String(tc.args);
+      var res = tc.result == null ? "" : String(tc.result);
+      var err = !!tc.err;
+      var badge = err ? '<span class="t-err">错误</span>' : "";
+      var bodyHtml = "";
+      if (args !== "") bodyHtml += '<div class="tool-sec"><div class="tool-label">参数</div><pre>' + esc(args) + '</pre></div>';
+      if (res !== "") bodyHtml += '<div class="tool-sec"><div class="tool-label">结果</div><pre>' + esc(res) + '</pre></div>';
+      if (bodyHtml === "") bodyHtml = '<div class="tool-sec"><pre class="empty">（无内容）</pre></div>';
+      return '<div class="msg msg-tool"><div class="tool-card' + (err ? " err" : "") + '">'
+        + '<div class="tool-head"><span class="tool-name">' + nm + '</span>' + badge + '<span class="tool-toggle">展开 ▸</span></div>'
+        + '<div class="tool-body" hidden>' + bodyHtml + '</div></div></div>';
+    }
+    if (role === "user") return '<div class="msg msg-user"><div class="bubble">' + body + '</div><div class="mtime">' + fmtTime(m.t) + '</div></div>';
+    if (role === "assistant") return '<div class="msg msg-assistant"><div class="bubble">' + body + '</div><div class="mtime">' + fmtTime(m.t) + '</div></div>';
+    return '<div class="msg msg-other"><div class="role-label">' + esc(role) + '</div><div class="bubble">' + body + '</div><div class="mtime">' + fmtTime(m.t) + '</div></div>';
+  }
+
+  function toolCallCount(s) {
+    var n = 0;
+    (s.messages || []).forEach(function (m) { if (m.tc) n++; });
+    return n;
+  }
+
+  function sessionHtml(s, idx) {
+    var msgs = s.messages || [];
+    var tr = (s.first && s.last) ? fmtTime(s.first) + " → " + fmtTime(s.last) : (s.first ? fmtTime(s.first) : "无时间");
+    var src = toolName(s.tool) + " · " + (s.user || "未知项目") + " · " + (s.source || "未知文件");
+    var body = msgs.length === 0 ? '<div class="sess-empty">无消息</div>' : msgs.map(msgHtml).join("");
+    return '<section class="sess" data-idx="' + idx + '">'
+      + '<header class="sess-head"><span class="tag">' + toolName(s.tool) + '</span>'
+      + '<div class="sess-titles"><div class="sess-title">' + esc(s.title) + '</div><div class="sess-src">' + esc(src) + '</div></div>'
+      + '<div class="sess-meta"><span>' + esc(tr) + '</span><span>' + msgs.length + ' 消息</span><span>' + toolCallCount(s) + ' 工具调用</span></div>'
+      + '<span class="caret">▸</span></header>'
+      + '<div class="sess-body" hidden>' + body + '</div></section>';
+  }
+
+  var sessions = [];
+  $("scanBtn").addEventListener("click", function () {
+    var p = $("path").value.trim();
+    if (!p) { setStatus("请先选择目录", true); return; }
+    setStatus("正在扫描…");
+    post("/api/scan", { path: p }).then(function (r) {
+      if (r.error) { setStatus(r.error, true); return; }
+      sessions = r.sessions || [];
+      var meta = r.meta || {};
+      setStatus("扫描 " + (r.scanned || 0) + " 项，解析 " + sessions.length + " 个会话，失败 " + (meta.failed || []).length + " 项");
+      // 统计
+      var st = {};
+      sessions.forEach(function (s) {
+        var t = s.tool || "unknown";
+        st[t] = st[t] || { sess: 0, msg: 0 };
+        st[t].sess++; st[t].msg += (s.messages || []).length;
+      });
+      var statsHtml = "";
+      TOOL_ORDER.forEach(function (t) {
+        var c = st[t] || { sess: 0, msg: 0 };
+        statsHtml += '<div class="stat"><span class="stat-name">' + toolName(t) + '</span><span class="stat-num">' + c.sess + ' 会话</span><span class="stat-num">' + c.msg + ' 消息</span></div>';
+      });
+      $("stats").innerHTML = statsHtml;
+      // 会话列表（工具分组、时间倒序）
+      var idxs = sessions.map(function (_, i) { return i; });
+      var rank = function (t) { var i = TOOL_ORDER.indexOf(t); return i === -1 ? 99 : i; };
+      idxs.sort(function (a, b) {
+        var ra = rank(sessions[a].tool), rb = rank(sessions[b].tool);
+        if (ra !== rb) return ra - rb;
+        return (sessions[b].first || 0) - (sessions[a].first || 0);
+      });
+      var groups = [];
+      idxs.forEach(function (i) {
+        var t = sessions[i].tool;
+        if (!groups.length || groups[groups.length - 1].tool !== t) groups.push({ tool: t, items: [] });
+        groups[groups.length - 1].items.push(i);
+      });
+      var gHtml = groups.map(function (grp) {
+        return '<h3 class="section-title" style="text-transform:none;letter-spacing:0">' + toolName(grp.tool) + '</h3>'
+          + grp.items.map(function (i) { return sessionHtml(sessions[i], i); }).join("");
+      }).join("");
+      $("groups").innerHTML = gHtml || '<div class="noresult">未解析出会话（目录里没有可识别的对话数据）</div>';
+      // 失败
+      var failed = meta.failed || [];
+      if (!failed.length) {
+        $("failedbox").innerHTML = '<div class="failedbox ok">无解析失败</div>';
+      } else {
+        $("failedbox").innerHTML = '<h3 class="failed-title">解析失败 ' + failed.length + ' 项</h3><ul class="failed-list">'
+          + failed.map(function (f) { return '<li>' + esc(typeof f === "string" ? f : JSON.stringify(f)) + '</li>'; }).join("") + '</ul>';
+      }
+    });
+  });
+
+  /* 会话展开 */
+  $("groups").addEventListener("click", function (e) {
+    var head = e.target.closest(".sess-head");
+    if (head) {
+      var body = head.parentNode.querySelector(".sess-body");
+      var caret = head.querySelector(".caret");
+      var open = !body.hidden;
+      body.hidden = open;
+      caret.textContent = open ? "▸" : "▾";
+      head.classList.toggle("open", !open);
+      return;
+    }
+    var thead = e.target.closest(".tool-head");
+    if (thead) {
+      var tbody = thead.parentNode.querySelector(".tool-body");
+      if (tbody) {
+        tbody.hidden = !tbody.hidden;
+        thead.querySelector(".tool-toggle").textContent = tbody.hidden ? "展开 ▸" : "收起 ▾";
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
